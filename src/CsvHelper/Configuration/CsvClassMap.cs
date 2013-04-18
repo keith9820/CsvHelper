@@ -2,6 +2,12 @@
 // This file is a part of CsvHelper and is licensed under the MS-PL
 // See LICENSE.txt for details or visit http://www.opensource.org/licenses/ms-pl.html
 // http://csvhelper.com
+// *************************
+// Forked Version 04/2013
+// Git: https://github.com/thiscode/CsvHelper
+// Documentation: https://github.com/thiscode/CsvHelper/Wiki
+// Author: Thomas Miliopoulos (thiscode)
+// *************************
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
@@ -12,7 +18,7 @@ namespace CsvHelper.Configuration
 	///<summary>
 	/// Maps class properties to CSV fields.
 	///</summary>
-	public abstract class CsvClassMap
+	public class CsvClassMap
 	{
 		private readonly CsvPropertyMapCollection propertyMaps = new CsvPropertyMapCollection();
 		private readonly List<CsvPropertyReferenceMap> referenceMaps = new List<CsvPropertyReferenceMap>();

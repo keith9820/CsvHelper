@@ -2,6 +2,12 @@
 // This file is a part of CsvHelper and is licensed under the MS-PL
 // See LICENSE.txt for details or visit http://www.opensource.org/licenses/ms-pl.html
 // http://csvhelper.com
+// *************************
+// Forked Version 04/2013
+// Git: https://github.com/thiscode/CsvHelper
+// Documentation: https://github.com/thiscode/CsvHelper/Wiki
+// Author: Thomas Miliopoulos (thiscode)
+// *************************
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -23,8 +29,7 @@ namespace CsvHelper.Configuration
 	public class CsvConfiguration
 	{
 #if !NET_2_0
-		private CsvPropertyMapCollection properties = new CsvPropertyMapCollection();
-		private List<CsvPropertyReferenceMap> references = new List<CsvPropertyReferenceMap>();
+		private CsvClassMap mapping;
 #endif
 #if !WINRT_4_5
 		private BindingFlags propertyBindingFlags = BindingFlags.Public | BindingFlags.Instance;
@@ -41,27 +46,15 @@ namespace CsvHelper.Configuration
 		private Encoding encoding = Encoding.UTF8;
 		private bool quoteAllFields = false;
 		private bool quoteNoFields = false;
+        private CultureInfo useCultureInfo = CultureInfo.CurrentCulture;
 
 #if !NET_2_0
 		/// <summary>
-		/// Gets the constructor expression.
+		/// Gets the mapping class.
 		/// </summary>
-		public virtual NewExpression Constructor { get; private set; } 
-
-		/// <summary>
-		/// Gets the property mappings.
-		/// </summary>
-		public virtual CsvPropertyMapCollection Properties
+		public virtual CsvClassMap Mapping
 		{
-			get { return properties; }
-		}
-
-		/// <summary>
-		/// Gets the reference mappings.
-		/// </summary>
-		public virtual List<CsvPropertyReferenceMap> References
-		{
-			get { return references; }
+			get { return mapping; }
 		}
 #endif
 
@@ -212,9 +205,52 @@ namespace CsvHelper.Configuration
 		/// should be used when reading and writing. True to
 		/// use InvariantCulture, false to use CurrentCulture.
 		/// </summary>
-		public virtual bool UseInvariantCulture { get; set; }
+        [Obsolete("Use \"UseCultureInfo=CultureInfo.InvariantCulture\" instead. Attention: Setting this to false, will throw an exception!")]
+        public virtual bool UseInvariantCulture
+        {
+            get
+            {
+                return useCultureInfo==CultureInfo.InvariantCulture;
+            }
+            set
+            {
+                if (value)
+                {
+                    //This is for backward compatibility
+                    this.UseCultureInfo = CultureInfo.InvariantCulture;
+                }
+                else
+                {
+                    //What if someone set the property first to "true" then to "false" and meanwhile UseCultureInfo to something else?
+                    throw new Exception("You do not have to set this to false. This is the default value. Please use \"UseCultureInfo\" instead.");
+                }
+            }
+        }
 
-		/// <summary>
+        /// <summary>
+        /// Gets or sets the <see cref="CultureInfo"/> that
+        /// should be used when reading and writing.
+        /// </summary>
+        public virtual CultureInfo UseCultureInfo
+        {
+            get
+            {
+                return useCultureInfo;
+            }
+            set
+            {
+                if (value == null)
+                {
+                    throw new Exception("Do not set UseCultureInfo to null");
+                }
+                else
+                {
+                    useCultureInfo = value;
+                }
+            }
+        }
+
+        /// <summary>
 		/// Gets or sets a value indicating whether all fields are quoted when writing,
 		/// or just ones that have to be. <see cref="QuoteAllFields"/> and
 		/// <see cref="QuoteNoFields"/> cannot be true at the same time. Turning one
@@ -337,8 +373,8 @@ namespace CsvHelper.Configuration
 			where TMap : CsvClassMap<TClass>
 			where TClass : class
 		{
-			var mapping = ReflectionHelper.CreateInstance<TMap>();
-			ClassMapping( mapping );
+            var ClassMap = ReflectionHelper.CreateInstance<TMap>();
+            ClassMapping(ClassMap);
 		}
 
 		/// <summary>
@@ -349,8 +385,8 @@ namespace CsvHelper.Configuration
 		/// <typeparam name="TMap">The type of mapping class to use.</typeparam>
 		public virtual void ClassMapping<TMap>() where TMap : CsvClassMap
 		{
-			var mapping = ReflectionHelper.CreateInstance<TMap>();
-			ClassMapping( mapping );
+            var ClassMap = ReflectionHelper.CreateInstance<TMap>();
+            ClassMapping(ClassMap);
 		}
 
 		/// <summary>
@@ -358,11 +394,9 @@ namespace CsvHelper.Configuration
 		/// When using a class map, no properties are mapped by default.
 		/// Only properties specified in the mapping are used.
 		/// </summary>
-		public virtual void ClassMapping( CsvClassMap classMap )
+		public virtual void ClassMapping( CsvClassMap ClassMap )
 		{
-			Constructor = classMap.Constructor;
-			properties = classMap.PropertyMaps;
-			references = classMap.ReferenceMaps;
+            mapping = ClassMap;
 		}
 
 		/// <summary>
@@ -371,9 +405,9 @@ namespace CsvHelper.Configuration
 		/// will change the default property behavior.
 		/// </summary>
 		/// <typeparam name="TClass">The type of custom class that contains the attributes.</typeparam>
-		public virtual void AttributeMapping<TClass>() where TClass : class
+        public virtual void AttributeMapping<TClass>() where TClass : class
 		{
-			AttributeMapping( typeof( TClass ) );
+            mapping = AttributeMappingClass(typeof(TClass));
 		}
 
 		/// <summary>
@@ -382,7 +416,18 @@ namespace CsvHelper.Configuration
 		/// will change the default property behavior.
 		/// </summary>
 		/// <param name="type">The type of custom class that contains the attributes.</param>
-		public virtual void AttributeMapping( Type type )
+        public virtual void AttributeMapping(Type type)
+        {
+            mapping = AttributeMappingClass(type);
+        }
+
+        /// <summary>
+        /// Use <see cref="CsvFieldAttribute"/>s to configure mappings.
+        /// All properties are mapped by default and attribute mapping 
+        /// will change the default property behavior.
+        /// </summary>
+        /// <param name="type">The type of custom class that contains the attributes.</param>
+        public virtual CsvClassMap AttributeMappingClass(Type type)
 		{
 #if !WINRT_4_5
 			var props = type.GetProperties( propertyBindingFlags );
@@ -390,6 +435,7 @@ namespace CsvHelper.Configuration
 			var props = type.GetProperties();
 #endif
 
+            var returnValue = new CsvClassMap();
 			foreach( var property in props )
 			{
 				if( !property.CanWrite )
@@ -433,13 +479,13 @@ namespace CsvHelper.Configuration
 					{
 						map.TypeConverter( typeConverter );
 					}
-					properties.Add( map );
+                    returnValue.PropertyMaps.Add(map);
 				}
 				else
 				{
 					// This is a reference mapping.
 					var refMap = ReferenceMap( property );
-					references.Add( refMap );
+                    returnValue.ReferenceMaps.Add(refMap);
 					var refProps = property.PropertyType.GetProperties();
 					foreach( var refProp in refProps )
 					{
@@ -461,20 +507,21 @@ namespace CsvHelper.Configuration
 								map.Name( refCsvFieldAttribute.Names );
 							}
 						}
-						else
-						{
-							// Use defaults.
-							map = PropertyMap( refProp );
-						}
+                        else
+                        {
+                            // Use defaults.
+                            map = PropertyMap(refProp);
+                        }
 						var typeConverter = ReflectionHelper.GetTypeConverterFromAttribute( refProp );
 						if( typeConverter != null )
 						{
 							map.TypeConverter( typeConverter );
 						}
-						refMap.ReferenceProperties.Add( map );
+						refMap.Mapping.PropertyMaps.Add( map );
 					}
 				}
 			}
+            return returnValue;
 		}
 #endif
 	}

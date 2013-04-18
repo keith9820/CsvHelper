@@ -2,12 +2,6 @@
 // This file is a part of CsvHelper and is licensed under the MS-PL
 // See LICENSE.txt for details or visit http://www.opensource.org/licenses/ms-pl.html
 // http://csvhelper.com
-// *************************
-// Forked Version 04/2013
-// Git: https://github.com/thiscode/CsvHelper
-// Documentation: https://github.com/thiscode/CsvHelper/Wiki
-// Author: Thomas Miliopoulos (thiscode)
-// *************************
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -32,7 +26,7 @@ namespace CsvHelper
     /// <summary>
     /// Reads data that was parsed from <see cref="ICsvParser" />.
     /// </summary>
-    public class CsvReader : ICsvReader
+    public class CsvReaderOrigin : ICsvReader
     {
         private bool disposed;
         private bool hasBeenRead;
@@ -96,7 +90,7 @@ namespace CsvHelper
         /// <see cref="CsvParser"/> as the default parser.
         /// </summary>
         /// <param name="reader">The reader.</param>
-        public CsvReader(TextReader reader)
+        public CsvReaderOrigin(TextReader reader)
         {
             if (reader == null)
             {
@@ -113,7 +107,7 @@ namespace CsvHelper
         /// </summary>
         /// <param name="reader">The reader.</param>
         /// <param name="configuration">The configuration.</param>
-        public CsvReader(TextReader reader, CsvConfiguration configuration)
+        public CsvReaderOrigin(TextReader reader, CsvConfiguration configuration)
         {
             if (reader == null)
             {
@@ -132,7 +126,7 @@ namespace CsvHelper
         /// Creates a new CSV reader using the given <see cref="ICsvParser" />.
         /// </summary>
         /// <param name="parser">The <see cref="ICsvParser" /> used to parse the CSV file.</param>
-        public CsvReader(ICsvParser parser)
+        public CsvReaderOrigin(ICsvParser parser)
         {
             if (parser == null)
             {
@@ -315,13 +309,7 @@ namespace CsvHelper
         /// <returns>The field converted to <see cref="Object"/>.</returns>
         public virtual object GetField(int index, ITypeConverter converter)
         {
-
-            // Set the current index being used so we
-            // have more information if an error occurs
-            // when reading records.
-            currentIndex = index;
-
-            var culture = Configuration.UseCultureInfo;
+            var culture = Configuration.UseInvariantCulture ? CultureInfo.InvariantCulture : CultureInfo.CurrentCulture;
             return converter.ConvertFromString(culture, currentRecord[index]);
         }
 
@@ -579,11 +567,6 @@ namespace CsvHelper
             CheckDisposed();
             CheckHasBeenRead();
 
-            // Set the current index being used so we
-            // have more information if an error occurs
-            // when reading records.
-            currentIndex = index;
-
             // DateTimeConverter.ConvertFrom will successfully convert
             // a white space string to a DateTime.MinValue instead of
             // returning null, so we need to handle this special case.
@@ -626,12 +609,6 @@ namespace CsvHelper
             CheckHasBeenRead();
 
             var index = GetFieldIndex(name);
-
-            // Set the current index being used so we
-            // have more information if an error occurs
-            // when reading records.
-            currentIndex = index;
-
             if (index == -1)
             {
                 field = default(T);
@@ -656,12 +633,6 @@ namespace CsvHelper
             CheckHasBeenRead();
 
             var fieldIndex = GetFieldIndex(name, index);
-
-            // Set the current index being used so we
-            // have more information if an error occurs
-            // when reading records.
-            currentIndex = index;
-
             if (fieldIndex == -1)
             {
                 field = default(T);
@@ -751,7 +722,7 @@ namespace CsvHelper
             T record;
             try
             {
-                record = GetReadRecordFunc<T>()();
+                record = GetReadRecordFunc<T>()(this);
             }
             catch (CsvReaderException)
             {
@@ -778,7 +749,7 @@ namespace CsvHelper
             object record;
             try
             {
-                record = GetReadRecordFunc(type)();
+                record = GetReadRecordFunc(type)(this);
             }
             catch (CsvReaderException)
             {
@@ -810,7 +781,7 @@ namespace CsvHelper
                 T record;
                 try
                 {
-                    record = GetReadRecordFunc<T>()();
+                    record = GetReadRecordFunc<T>()(this);
                 }
                 catch (CsvReaderException)
                 {
@@ -844,7 +815,7 @@ namespace CsvHelper
                 object record;
                 try
                 {
-                    record = GetReadRecordFunc(type)();
+                    record = GetReadRecordFunc(type)(this);
                 }
                 catch (CsvReaderException)
                 {
@@ -1013,13 +984,24 @@ namespace CsvHelper
 
             CultureInfo culture;
             CompareOptions compareOptions;
-            culture = Configuration.UseCultureInfo;
-            if (!Configuration.IsCaseSensitive)
+            if (Configuration.UseInvariantCulture && !Configuration.IsCaseSensitive)
             {
+                culture = CultureInfo.InvariantCulture;
+                compareOptions = CompareOptions.IgnoreCase;
+            }
+            else if (Configuration.UseInvariantCulture && Configuration.IsCaseSensitive)
+            {
+                culture = CultureInfo.InvariantCulture;
+                compareOptions = CompareOptions.None;
+            }
+            else if (!Configuration.UseInvariantCulture && !Configuration.IsCaseSensitive)
+            {
+                culture = CultureInfo.CurrentCulture;
                 compareOptions = CompareOptions.IgnoreCase;
             }
             else
             {
+                culture = CultureInfo.CurrentCulture;
                 compareOptions = CompareOptions.None;
             }
 #if !NET_2_0
@@ -1093,12 +1075,12 @@ namespace CsvHelper
         /// <typeparam name="T">The <see cref="Type"/> of object that is created
         /// and populated.</typeparam>
         /// <returns>The function delegate.</returns>
-        protected virtual Func<T> GetReadRecordFunc<T>() where T : class
+        protected virtual Func<ICsvReader, T> GetReadRecordFunc<T>() where T : class
         {
             var recordType = typeof(T);
-            CreateReadRecordFunc(recordType, (body) => Expression.Lambda<Func<T>>(body).Compile());
+            CreateReadRecordFunc(recordType, (body, readerParameter) => Expression.Lambda<Func<ICsvReader, T>>(body, readerParameter).Compile());
 
-            return (Func<T>)recordFuncs[recordType];
+            return (Func<ICsvReader, T>)recordFuncs[recordType];
         }
 
         /// <summary>
@@ -1108,11 +1090,11 @@ namespace CsvHelper
         /// <param name="recordType">The <see cref="Type"/> of object that is created
         /// and populated.</param>
         /// <returns>The function delegate.</returns>
-        protected virtual Func<object> GetReadRecordFunc(Type recordType)
+        protected virtual Func<ICsvReader, object> GetReadRecordFunc(Type recordType)
         {
-            CreateReadRecordFunc(recordType, (body) => Expression.Lambda<Func<object>>(body).Compile());
+            CreateReadRecordFunc(recordType, (body, readerParameter) => Expression.Lambda<Func<ICsvReader, object>>(body, readerParameter).Compile());
 
-            return (Func<object>)recordFuncs[recordType];
+            return (Func<ICsvReader, object>)recordFuncs[recordType];
         }
 
         /// <summary>
@@ -1121,24 +1103,40 @@ namespace CsvHelper
         /// </summary>
         /// <param name="recordType">Type of the record.</param>
         /// <param name="expressionCompiler">The expression compiler.</param>
-        protected virtual void CreateReadRecordFunc(Type recordType, Func<Expression, Delegate> expressionCompiler)
+        protected virtual void CreateReadRecordFunc(Type recordType, Func<Expression, ParameterExpression, Delegate> expressionCompiler)
         {
             if (recordFuncs.ContainsKey(recordType))
             {
                 return;
             }
 
+            var bindings = new List<MemberBinding>();
+            var readerParameter = Expression.Parameter(typeof(ICsvReader), "reader");
+
             // If there is no property mappings yet, use attribute mappings.
-            if ((configuration.Mapping.PropertyMaps.Count == 0)&&(configuration.Mapping.ReferenceMaps.Count == 0))
+            if (configuration.Mapping.PropertyMaps.Count == 0)
             {
                 configuration.AttributeMapping(recordType);
             }
 
-            List<MemberBinding> bindings = AddPropertyBindingsRecursive(configuration.Mapping, recordType);
+            AddPropertyBindings(readerParameter, configuration.Mapping.PropertyMaps, bindings);
+
+            foreach (var referenceMap in configuration.Mapping.ReferenceMaps)
+            {
+                var referenceReaderParameter = Expression.Parameter(typeof(ICsvReader), "reader2");
+                var referenceBindings = new List<MemberBinding>();
+                AddPropertyBindings(referenceReaderParameter, referenceMap.Mapping.PropertyMaps, referenceBindings);
+                var referenceBody = Expression.MemberInit(Expression.New(referenceMap.Property.PropertyType), referenceBindings);
+                var referenceFunc = Expression.Lambda(referenceBody, referenceReaderParameter);
+                var referenceCompiled = referenceFunc.Compile();
+                var referenceCompiledMethod = referenceCompiled.GetType().GetMethod("Invoke");
+                Expression referenceObjectExpression = Expression.Call(Expression.Constant(referenceCompiled), referenceCompiledMethod, Expression.Constant(this));
+                bindings.Add(Expression.Bind(referenceMap.Property, referenceObjectExpression));
+            }
 
             var constructorExpression = configuration.Mapping.Constructor ?? Expression.New(recordType);
             var body = Expression.MemberInit(constructorExpression, bindings);
-            var func = expressionCompiler(body);
+            var func = expressionCompiler(body, readerParameter);
             recordFuncs[recordType] = func;
 
             #region This is the expression that is built:
@@ -1176,65 +1174,6 @@ namespace CsvHelper
             //
 
             #endregion
-
-        }
-
-        private List<MemberBinding> AddPropertyBindingsRecursive(CsvClassMap MappingClass, Type recordType)
-        {
-
-            CsvClassMap UsedMappingClass;
-            if ((MappingClass.PropertyMaps.Count == 0)&&(MappingClass.ReferenceMaps.Count == 0))
-            {
-                // If there is no property mappings yet, use attribute mappings.
-                UsedMappingClass = configuration.AttributeMappingClass(recordType);
-            }
-            else
-            {
-                UsedMappingClass = MappingClass;
-            }
-
-            var bindings = new List<MemberBinding>();
-            var collectionBindings = new Dictionary<PropertyInfo, List<Expression>>();
-            var collectionConstructors = new Dictionary<PropertyInfo, NewExpression>();
-
-            AddPropertyBindings(UsedMappingClass.PropertyMaps, bindings);
-
-            foreach (var referencePropertyMap in UsedMappingClass.ReferenceMaps)
-            {
-
-                var referenceBindings = AddPropertyBindingsRecursive(referencePropertyMap.Mapping, referencePropertyMap.Property.PropertyType);
-                if (referencePropertyMap.IsCollection)
-                {
-                    //Group bindings by property, and remember the type to use
-                    Expression referenceBody = (Expression)Expression.MemberInit(Expression.New(referencePropertyMap.CollectionType), referenceBindings);
-                    if (collectionBindings.ContainsKey(referencePropertyMap.Property))
-                    {
-                        collectionBindings[referencePropertyMap.Property].Add(referenceBody);
-                        collectionConstructors[referencePropertyMap.Property] = referencePropertyMap.Mapping.Constructor ?? Expression.New(referencePropertyMap.Property.PropertyType);
-                    }
-                    else
-                    {
-                        collectionBindings.Add(referencePropertyMap.Property, new List<Expression>() { referenceBody });
-                        collectionConstructors.Add(referencePropertyMap.Property, referencePropertyMap.Mapping.Constructor ?? Expression.New(referencePropertyMap.Property.PropertyType));
-                    }
-                }
-                else
-                {
-                    var referenceBodyPre = Expression.MemberInit(referencePropertyMap.Mapping.Constructor ?? Expression.New(referencePropertyMap.Property.PropertyType), referenceBindings);
-                    Expression referenceBody = (Expression)Expression.Convert(referenceBodyPre, referencePropertyMap.Property.PropertyType);
-                    bindings.Add(Expression.Bind(referencePropertyMap.Property, referenceBody));
-                }
-            }
-
-            foreach (var collectionBinding in collectionBindings)
-            {
-                var OuterReferenceBodyPre = Expression.ListInit(collectionConstructors[collectionBinding.Key], collectionBinding.Value);
-                var OuterReferenceBody = Expression.Convert(OuterReferenceBodyPre, collectionBinding.Key.PropertyType);
-                bindings.Add(Expression.Bind(collectionBinding.Key, OuterReferenceBody));
-            }
-
-            return bindings;
-
         }
 
         /// <summary>
@@ -1243,24 +1182,14 @@ namespace CsvHelper
         /// <param name="readerParameter">The reader parameter.</param>
         /// <param name="properties">The properties.</param>
         /// <param name="bindings">The bindings.</param>
-        protected virtual void AddPropertyBindings(CsvPropertyMapCollection properties, List<MemberBinding> bindings)
+        protected virtual void AddPropertyBindings(ParameterExpression readerParameter, CsvPropertyMapCollection properties, List<MemberBinding> bindings)
         {
             foreach (var propertyMap in properties)
             {
                 if (propertyMap.ConvertUsingValue != null)
                 {
                     // The user is providing the expression to do the conversion.
-                    Expression exp = Expression.Invoke(propertyMap.ConvertUsingValue, Expression.Constant(this));
-                    exp = Expression.Convert(exp, propertyMap.PropertyValue.PropertyType);
-                    bindings.Add(Expression.Bind(propertyMap.PropertyValue, exp));
-					continue;
-				}
-
-                if (propertyMap.ConstantUsingValue != null)
-                {
-                    // The user is providing a constant value to be set.
-                    Expression exp = Expression.Constant(propertyMap.ConstantUsingValue);
-                    exp = Expression.Convert(exp, propertyMap.PropertyValue.PropertyType);
+                    var exp = Expression.Invoke(propertyMap.ConvertUsingValue, Expression.Constant(this));
                     bindings.Add(Expression.Bind(propertyMap.PropertyValue, exp));
                     continue;
                 }
@@ -1271,7 +1200,7 @@ namespace CsvHelper
                     continue;
                 }
 
-                if ( (propertyMap.TypeConverterValue == null || !propertyMap.TypeConverterValue.CanConvertFrom(typeof(string))) && (propertyMap.ConvertFieldUsingValue == null) )
+                if (propertyMap.TypeConverterValue == null || !propertyMap.TypeConverterValue.CanConvertFrom(typeof(string)))
                 {
                     // Skip if the type isn't convertible.
                     continue;
@@ -1286,20 +1215,11 @@ namespace CsvHelper
 
                 // Get the field using the field index.
                 var method = typeof(ICsvReaderRow).GetProperty("Item", typeof(string), new[] { typeof(int) }).GetGetMethod();
-                Expression fieldExpression = Expression.Call(Expression.Constant(this), method, Expression.Constant(index, typeof(int)));
-
-                if (propertyMap.ConvertFieldUsingValue != null)
-                {
-                    // The user is providing the expression to do the conversion.
-                    Expression exp = Expression.Invoke(propertyMap.ConvertFieldUsingValue, fieldExpression);
-                    exp = Expression.Convert(exp, propertyMap.PropertyValue.PropertyType);
-                    bindings.Add(Expression.Bind(propertyMap.PropertyValue, exp));
-                    continue;
-                }
+                Expression fieldExpression = Expression.Call(readerParameter, method, Expression.Constant(index, typeof(int)));
 
                 // Convert the field.
                 var typeConverterExpression = Expression.Constant(propertyMap.TypeConverterValue);
-				var culture = Expression.Constant( Configuration.UseCultureInfo );
+                var culture = Expression.Constant(Configuration.UseInvariantCulture ? CultureInfo.InvariantCulture : CultureInfo.CurrentCulture);
 
                 // Create type converter expression.
                 Expression typeConverterFieldExpression = Expression.Call(typeConverterExpression, "ConvertFromString", null, culture, fieldExpression);

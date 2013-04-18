@@ -2,6 +2,12 @@
 // This file is a part of CsvHelper and is licensed under the MS-PL
 // See LICENSE.txt for details or visit http://www.opensource.org/licenses/ms-pl.html
 // http://csvhelper.com
+// *************************
+// Forked Version 04/2013
+// Git: https://github.com/thiscode/CsvHelper
+// Documentation: https://github.com/thiscode/CsvHelper/Wiki
+// Author: Thomas Miliopoulos (thiscode)
+// *************************
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -26,7 +32,9 @@ namespace CsvHelper.Configuration
 		private object defaultValue;
 		private bool isDefaultValueSet;
 		private string format;
-		private Expression convertExpression;
+        private Expression convertExpression;
+        private Expression convertFieldExpression;
+        private object constantValue;
 
 		/// <summary>
 		/// Gets the property value.
@@ -79,16 +87,33 @@ namespace CsvHelper.Configuration
 		/// </value>
 		public virtual string FormatValue { get { return format; } }
 
-		/// <summary>
-		/// Gets the expression used to convert data in the
-		/// row to the property.
-		/// </summary>
-		/// <value>
-		/// The convert using value.
-		/// </value>
-		public virtual Expression ConvertUsingValue { get { return convertExpression; } } 
+        /// <summary>
+        /// Gets the expression used to convert data in the
+        /// row to the property.
+        /// </summary>
+        /// <value>
+        /// The convert using value.
+        /// </value>
+        public virtual Expression ConvertUsingValue { get { return convertExpression; } }
 
-		/// <summary>
+        /// <summary>
+        /// Gets the expression used to convert raw data from the
+        /// field to the property.
+        /// </summary>
+        /// <value>
+        /// The convert using value.
+        /// </value>
+        public virtual Expression ConvertFieldUsingValue { get { return convertFieldExpression; } }
+
+        /// <summary>
+        /// Gets constant value to be used to set the property-value.
+        /// </summary>
+        /// <value>
+        /// The constant using value.
+        /// </value>
+        public virtual object ConstantUsingValue { get { return constantValue; } }
+
+        /// <summary>
 		/// Creates a new <see cref="CsvPropertyMap"/> instance using the specified property.
 		/// </summary>
 		public CsvPropertyMap( PropertyInfo property )
@@ -188,19 +213,41 @@ namespace CsvHelper.Configuration
 			return this;
 		}
 
-		/// <summary>
-		/// Specifies an expression to be used to convert data in the
-		/// row to the property.
-		/// </summary>
-		/// <typeparam name="T">The type of the property that will be set.</typeparam>
-		/// <param name="convertExpression">The convert expression.</param>
-		public virtual CsvPropertyMap ConvertUsing<T>( Func<ICsvReaderRow, T> convertExpression )
-		{
-			this.convertExpression = (Expression<Func<ICsvReaderRow, T>>)( x => convertExpression( x ) );
-			return this;
-		}
+        /// <summary>
+        /// Specifies an expression to be used to convert data in the
+        /// row to the property.
+        /// </summary>
+        /// <typeparam name="T">The type of the property that will be set.</typeparam>
+        /// <param name="convertExpression">The convert expression.</param>
+        public virtual CsvPropertyMap ConvertUsing<T>(Func<ICsvReaderRow, T> convertExpression)
+        {
+            this.convertExpression = (Expression<Func<ICsvReaderRow, T>>)(x => convertExpression(x));
+            return this;
+        }
 
-		/// <summary>
+        /// <summary>
+        /// Specifies an expression to be used to convert raw data from the
+        /// field to the property.
+        /// </summary>
+        /// <typeparam name="T">The type of the property that will be set.</typeparam>
+        /// <param name="convertFieldExpression">The convert expression.</param>
+        public virtual CsvPropertyMap ConvertFieldUsing<T>(Func<string, T> convertFieldExpression)
+        {
+            this.convertFieldExpression = (Expression<Func<string, T>>)(x => convertFieldExpression(x));
+            return this;
+        }
+
+        /// <summary>
+        /// Specifies an constant value to be used to set the property-value.
+        /// </summary>
+        /// <param name="constantValue">The convert expression.</param>
+        public virtual CsvPropertyMap SetConstantValue(object constantValue)
+        {
+            this.constantValue = constantValue;
+            return this;
+        }
+
+        /// <summary>
 		/// The format the <see cref="ICsvWriter"/> will use instead
 		/// of a <see cref="TypeConverter"/> to conver the value to a string.
 		/// </summary>

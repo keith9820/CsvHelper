@@ -2,7 +2,14 @@
 // This file is a part of CsvHelper and is licensed under the MS-PL
 // See LICENSE.txt for details or visit http://www.opensource.org/licenses/ms-pl.html
 // http://csvhelper.com
+// *************************
+// Forked Version 04/2013
+// Git: https://github.com/thiscode/CsvHelper
+// Documentation: https://github.com/thiscode/CsvHelper/Wiki
+// Author: Thomas Miliopoulos (thiscode)
+// *************************
 using System.Globalization;
+using System.Collections.Generic;
 
 namespace CsvHelper.TypeConversion
 {
@@ -11,7 +18,40 @@ namespace CsvHelper.TypeConversion
 	/// </summary>
 	public class BooleanConverter : DefaultTypeConverter
 	{
-		/// <summary>
+        /// <summary>
+        /// Gets a <see cref="List"/> of strings which represents a value of "true"
+        /// </summary>
+        /// <value>
+        /// The <see cref="List"/> of strings which represents a value of "true"
+        /// </value>
+        public List<string> TrueRepresentation { get; private set; }
+
+        /// <summary>
+        /// Gets a <see cref="List"/> of strings which represents a value of "false"
+        /// </summary>
+        /// <value>
+        /// The <see cref="List"/> of strings which represents a value of "false"
+        /// </value>
+        public List<string> FalseRepresentation { get; private set; }
+
+        /// <summary>
+        /// Default constructor
+        /// </summary>
+        public BooleanConverter()
+            : this(new List<string>() { "yes", "y" }, new List<string>() { "no", "n" })
+        {
+        }
+
+        /// <summary>
+        /// Customizable constructor
+        /// </summary>
+        public BooleanConverter(List<string> trueStrings, List<string> falseStrings)
+        {
+            TrueRepresentation = trueStrings;
+            FalseRepresentation = falseStrings;
+        }
+
+        /// <summary>
 		/// Converts the string to an object.
 		/// </summary>
 		/// <param name="culture">The culture used when converting.</param>
@@ -39,15 +79,13 @@ namespace CsvHelper.TypeConversion
 			}
 
 			var t = ( text ?? string.Empty ).Trim();
-			if( culture.CompareInfo.Compare( "yes", t, CompareOptions.IgnoreCase ) == 0 ||
-				culture.CompareInfo.Compare( "y", t, CompareOptions.IgnoreCase ) == 0 )
+            if( TrueRepresentation.Exists(m => culture.CompareInfo.Compare( m, t, CompareOptions.IgnoreCase ) == 0) )
 			{
 				return true;
 			}
 
-			if( culture.CompareInfo.Compare( "no", t, CompareOptions.IgnoreCase ) == 0 ||
-				culture.CompareInfo.Compare( "n", t, CompareOptions.IgnoreCase ) == 0 )
-			{
+            if (FalseRepresentation.Exists(m => culture.CompareInfo.Compare(m, t, CompareOptions.IgnoreCase) == 0))
+            {
 				return false;
 			}
 

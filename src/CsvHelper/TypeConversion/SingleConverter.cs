@@ -2,6 +2,12 @@
 // This file is a part of CsvHelper and is licensed under the MS-PL
 // See LICENSE.txt for details or visit http://www.opensource.org/licenses/ms-pl.html
 // http://csvhelper.com
+// *************************
+// Forked Version 04/2013
+// Git: https://github.com/thiscode/CsvHelper
+// Documentation: https://github.com/thiscode/CsvHelper/Wiki
+// Author: Thomas Miliopoulos (thiscode)
+// *************************
 using System.Globalization;
 
 namespace CsvHelper.TypeConversion
@@ -11,6 +17,41 @@ namespace CsvHelper.TypeConversion
 	/// </summary>
 	public class SingleConverter : DefaultTypeConverter
 	{
+        private NumberStyles UsingNumberStyles = NumberStyles.Float;
+        private CultureInfo UsingCultureInfo;
+
+        /// <summary>
+        /// Default constructor
+        /// </summary>
+        public SingleConverter()
+        {
+        }
+
+        /// <summary>
+        /// Customizable constructor
+        /// </summary>
+        public SingleConverter(NumberStyles UseNumberStyles)
+        {
+            UsingNumberStyles = UseNumberStyles;
+        }
+
+        /// <summary>
+        /// Customizable constructor
+        /// </summary>
+        public SingleConverter(CultureInfo UseCultureInfo, NumberStyles UseNumberStyles)
+        {
+            UsingNumberStyles = UseNumberStyles;
+            UsingCultureInfo = UseCultureInfo;
+        }
+
+        /// <summary>
+        /// Customizable constructor
+        /// </summary>
+        public SingleConverter(CultureInfo UseCultureInfo)
+        {
+            UsingCultureInfo = UseCultureInfo;
+        }
+
 		/// <summary>
 		/// Converts the string to an object.
 		/// </summary>
@@ -20,12 +61,12 @@ namespace CsvHelper.TypeConversion
 		public override object ConvertFromString( CultureInfo culture, string text )
 		{
 			float f;
-			if( float.TryParse( text, NumberStyles.Float, culture, out f ) )
+            if (float.TryParse(text, UsingNumberStyles, UsingCultureInfo ?? culture, out f))
 			{
 				return f;
 			}
 
-			return base.ConvertFromString( culture, text );
+            return base.ConvertFromString(UsingCultureInfo ?? culture, text);
 		}
 
 		/// <summary>

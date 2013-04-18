@@ -2,6 +2,12 @@
 // This file is a part of CsvHelper and is licensed under the MS-PL
 // See LICENSE.txt for details or visit http://www.opensource.org/licenses/ms-pl.html
 // http://csvhelper.com
+// *************************
+// Forked Version 04/2013
+// Git: https://github.com/thiscode/CsvHelper
+// Documentation: https://github.com/thiscode/CsvHelper/Wiki
+// Author: Thomas Miliopoulos (thiscode)
+// *************************
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -66,11 +72,12 @@ namespace CsvHelper
 #endif
 
 			string fieldValue = null;
-			if( currentIndex.HasValue && currentRecord != null && currentIndex < currentRecord.Length )
+            if (currentIndex.HasValue && currentRecord != null && currentIndex < currentRecord.Length && currentIndex != -1)
 			{
 				fieldValue = currentRecord[currentIndex.Value];
 				messageInfo.AppendFormat( "Field Value: '{0}'", currentRecord[currentIndex.Value] ).AppendLine();
 			}
+            messageInfo.AppendFormat("Inner Exception: '{0}'", innerException.Message);
 
 			var exception = (TException)Activator.CreateInstance( typeof( TException ), messageInfo.ToString(), innerException );
 

@@ -2,6 +2,12 @@
 // This file is a part of CsvHelper and is licensed under the MS-PL
 // See LICENSE.txt for details or visit http://www.opensource.org/licenses/ms-pl.html
 // http://csvhelper.com
+// *************************
+// Forked Version 04/2013
+// Git: https://github.com/thiscode/CsvHelper
+// Documentation: https://github.com/thiscode/CsvHelper/Wiki
+// Author: Thomas Miliopoulos (thiscode)
+// *************************
 using System;
 #if !NET_2_0
 using System.Linq;
@@ -98,6 +104,10 @@ namespace CsvHelper
 				{
 					typeConverter = Activator.CreateInstance( typeConverterType ) as ITypeConverter;
 				}
+                else
+                {
+                    typeConverter = typeConverterAttribute.Instance;
+                }
 			}
 			return typeConverter;
 		}

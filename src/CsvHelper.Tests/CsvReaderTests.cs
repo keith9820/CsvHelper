@@ -716,15 +716,15 @@ namespace CsvHelper.Tests
 			var csvReader = new CsvReader( parserMock );
 			csvReader.Configuration.AttributeMapping<TestRecord>();
 
-			Assert.IsTrue( csvReader.Configuration.Properties.Count > 0 );
+            Assert.IsTrue(csvReader.Configuration.Mapping.PropertyMaps.Count > 0);
 
 			csvReader.InvalidateRecordCache<TestRecord>();
 
-			Assert.AreEqual( 0, csvReader.Configuration.Properties.Count );
+            Assert.AreEqual(0, csvReader.Configuration.Mapping.PropertyMaps.Count);
 
 			csvReader.Configuration.AttributeMapping<TestRecordNoAttributes>();
 
-			Assert.IsTrue( csvReader.Configuration.Properties.Count > 0 );
+            Assert.IsTrue(csvReader.Configuration.Mapping.PropertyMaps.Count > 0);
 		}
 
 		[TestMethod]

@@ -2,6 +2,12 @@
 // This file is a part of CsvHelper and is licensed under the MS-PL
 // See LICENSE.txt for details or visit http://www.opensource.org/licenses/ms-pl.html
 // http://csvhelper.com
+// *************************
+// Forked Version 04/2013
+// Git: https://github.com/thiscode/CsvHelper
+// Documentation: https://github.com/thiscode/CsvHelper/Wiki
+// Author: Thomas Miliopoulos (thiscode)
+// *************************
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -179,9 +185,7 @@ namespace CsvHelper
 		{
 			CheckDisposed();
 
-			var fieldString = Configuration.UseInvariantCulture
-			                  	? converter.ConvertToString( CultureInfo.InvariantCulture, field )
-			                  	: converter.ConvertToString( field );
+			var fieldString = converter.ConvertToString( Configuration.UseCultureInfo, field );
 			WriteField( fieldString );
 		}
 
@@ -235,16 +239,16 @@ namespace CsvHelper
 				throw new CsvWriterException( "Records have already been written. You can't write the header after writing records has started." );
 			}
 
-			if( configuration.Properties.Count == 0 )
+			if( configuration.Mapping.PropertyMaps.Count == 0 )
 			{
 				configuration.AttributeMapping( type );
 			}
 
 			var properties = new CsvPropertyMapCollection();
-			properties.AddRange( configuration.Properties );
-			foreach( var reference in configuration.References )
+            properties.AddRange(configuration.Mapping.PropertyMaps);
+            foreach (var reference in configuration.Mapping.ReferenceMaps)
 			{
-				properties.AddRange( reference.ReferenceProperties );
+				properties.AddRange( reference.Mapping.PropertyMaps );
 			}
 
 			foreach( var property in properties )
@@ -356,7 +360,7 @@ namespace CsvHelper
 		public virtual void InvalidateRecordCache( Type type )
 		{
 			typeActions.Remove( type );
-			configuration.Properties.Clear();
+            configuration.Mapping.PropertyMaps.Clear();
 			hasHeaderBeenWritten = false;
 			hasRecordBeenWritten = false;
 		}
@@ -558,7 +562,7 @@ namespace CsvHelper
 			var writerParameter = Expression.Parameter( typeof( ICsvWriter ), "writer" );
 			var recordParameter = Expression.Parameter( type, "record" );
 
-			if( configuration.Properties.Count == 0 )
+			if( configuration.Mapping.PropertyMaps.Count == 0 )
 			{
 				configuration.AttributeMapping( type );
 			}
@@ -566,10 +570,10 @@ namespace CsvHelper
 			// Get a list of all the properties so they will
 			// be sorted properly.
 			var properties = new CsvPropertyMapCollection();
-			properties.AddRange( configuration.Properties );
-			foreach( var reference in configuration.References )
+			properties.AddRange( configuration.Mapping.PropertyMaps);
+			foreach( var reference in configuration.Mapping.ReferenceMaps )
 			{
-				properties.AddRange( reference.ReferenceProperties );
+				properties.AddRange( reference.Mapping.PropertyMaps );
 			}
 
 			// A list of expressions that will go inside
@@ -594,8 +598,8 @@ namespace CsvHelper
 				var propertyMapCopy = propertyMap;
 
 				// Get the reference this property is a part of.
-				var reference = ( from r in configuration.References
-				                  from p in r.ReferenceProperties
+				var reference = ( from r in configuration.Mapping.ReferenceMaps
+				                  from p in r.Mapping.PropertyMaps
 				                  where p == propertyMapCopy
 				                  select r ).SingleOrDefault();
 
@@ -612,25 +616,14 @@ namespace CsvHelper
 				{
 					// Use string.Format instead of TypeConverter.
 					var formatExpression = Expression.Constant( propertyMap.FormatValue );
-					if( configuration.UseInvariantCulture )
-					{
-						var method = typeof( string ).GetMethod( "Format", new[] { typeof( IFormatProvider ), typeof( string ), typeof( object[] ) } );
-						fieldExpression = Expression.Convert( fieldExpression, typeof( object ) );
-						fieldExpression = Expression.NewArrayInit( typeof( object ), fieldExpression );
-						fieldExpression = Expression.Call( method, Expression.Constant( CultureInfo.InvariantCulture ), formatExpression, fieldExpression );
-					}
-					else
-					{
-						var method = typeof( string ).GetMethod( "Format", new[] { typeof( string ), typeof( object[] ) } );
-						fieldExpression = Expression.Convert( fieldExpression, typeof( object ) );
-						fieldExpression = Expression.NewArrayInit( typeof( object ), fieldExpression );
-						fieldExpression = Expression.Call( method, formatExpression, fieldExpression );
-					}
+                    var method = typeof(string).GetMethod("Format", new[] { typeof(IFormatProvider), typeof(string), typeof(object[]) });
+                    fieldExpression = Expression.Convert(fieldExpression, typeof(object));
+                    fieldExpression = Expression.Call(method, Expression.Constant(configuration.UseCultureInfo), formatExpression, fieldExpression);
 				}
 				else
 				{
 					var typeConverterExpression = Expression.Constant( propertyMap.TypeConverterValue );
-					var convertMethod = Configuration.UseInvariantCulture ? "ConvertToInvariantString" : "ConvertToString";
+					var convertMethod = Configuration.UseCultureInfo==CultureInfo.InvariantCulture ? "ConvertToInvariantString" : "ConvertToString";
 					var method = propertyMap.TypeConverterValue.GetType().GetMethod( convertMethod, new[] { typeof( object ) } );
 
 					fieldExpression = Expression.Convert( fieldExpression, typeof( object ) );
