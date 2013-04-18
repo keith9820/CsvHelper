@@ -16,13 +16,13 @@ The intention of the modifications of this fork:
 
 Beyond this, there was some improvements done. Here the modifications in detail:
 
-# Using specific instances of TypeConverters and set CultureInfo to use
-# Bugfix to work wit .NET 4.5 (prevent exception "Operation could destabalize the Runtime")
-# New Property-Mapping-Features "ConvertFieldUsing<T>" and "SetConstantValue"
-# New Methods to define references as collections "SetCollectionOf"
-# Some minor modifications relating to exception handling
-# Reference mapping and constructors of references can now be done recursively
-# Some basic modifications done in the GetRecord-logic
+- Using specific instances of TypeConverters and set CultureInfo to use
+- Bugfix to work wit .NET 4.5 (prevent exception "Operation could destabalize the Runtime")
+- New Property-Mapping-Features "ConvertFieldUsing<T>" and "SetConstantValue"
+- New Methods to define references as collections "SetCollectionOf"
+- Some minor modifications relating to exception handling
+- Reference mapping and constructors of references can now be done recursively
+- Some basic modifications done in the GetRecord-logic
 
 All Modification are explained in the Wiki!
 
