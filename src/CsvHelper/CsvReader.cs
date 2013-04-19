@@ -321,8 +321,7 @@ namespace CsvHelper
             // when reading records.
             currentIndex = index;
 
-            var culture = Configuration.UseCultureInfo;
-            return converter.ConvertFromString(culture, currentRecord[index]);
+			return converter.ConvertFromString( Configuration.CultureInfo, currentRecord[index] );
         }
 
         /// <summary>
@@ -1011,30 +1010,20 @@ namespace CsvHelper
                 }
             }
 
-            CultureInfo culture;
-            CompareOptions compareOptions;
-            culture = Configuration.UseCultureInfo;
-            if (!Configuration.IsCaseSensitive)
-            {
-                compareOptions = CompareOptions.IgnoreCase;
-            }
-            else
-            {
-                compareOptions = CompareOptions.None;
-            }
+			var compareOptions = !Configuration.IsCaseSensitive ? CompareOptions.IgnoreCase : CompareOptions.None;
 #if !NET_2_0
-            var name =
-                (from i in namedIndexes
-                 from n in names
-                 where culture.CompareInfo.Compare(i.Key, n, compareOptions) == 0
-                 select i.Key).SingleOrDefault();
+			var name =
+				( from i in namedIndexes
+				  from n in names
+				  where Configuration.CultureInfo.CompareInfo.Compare( i.Key, n, compareOptions ) == 0
+				  select i.Key ).SingleOrDefault();
 #else
 			string name = null;
 			foreach( var pair in namedIndexes )
 			{
 				foreach( var n in names )
 				{
-					if( culture.CompareInfo.Compare( pair.Key, n, compareOptions ) == 0 )
+					if( Configuration.CultureInfo.CompareInfo.Compare( pair.Key, n, compareOptions ) == 0 )
 					{
 						name = pair.Key;
 					}
@@ -1256,15 +1245,6 @@ namespace CsvHelper
 					continue;
 				}
 
-                if (propertyMap.ConstantUsingValue != null)
-                {
-                    // The user is providing a constant value to be set.
-                    Expression exp = Expression.Constant(propertyMap.ConstantUsingValue);
-                    exp = Expression.Convert(exp, propertyMap.PropertyValue.PropertyType);
-                    bindings.Add(Expression.Bind(propertyMap.PropertyValue, exp));
-                    continue;
-                }
-
                 if (propertyMap.IgnoreValue)
                 {
                     // Skip ignored properties.
@@ -1299,7 +1279,7 @@ namespace CsvHelper
 
                 // Convert the field.
                 var typeConverterExpression = Expression.Constant(propertyMap.TypeConverterValue);
-				var culture = Expression.Constant( Configuration.UseCultureInfo );
+				var culture = Expression.Constant( Configuration.CultureInfo );
 
                 // Create type converter expression.
                 Expression typeConverterFieldExpression = Expression.Call(typeConverterExpression, "ConvertFromString", null, culture, fieldExpression);

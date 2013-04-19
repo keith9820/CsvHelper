@@ -146,10 +146,9 @@ namespace CsvHelper.SpeedTests
                 question.AppendLine("2) Parse and count bytes");
                 question.AppendLine("3) Test Reader and GetRecord");
                 question.AppendLine("4) Test Reader and GetRecord with Reference");
-                question.AppendLine("5) Compare new Reader to origin");
                 question.AppendLine("q) Quit");
 				question.Append( "Select test to run: " );
-				var option = ReadUntilValid( question.ToString(), "Not a valid option.", s => new[] { "q", "1", "2", "3", "4", "5" }.Contains( s, StringComparer.Create( CultureInfo.CurrentCulture, true ) ) );
+				var option = ReadUntilValid( question.ToString(), "Not a valid option.", s => new[] { "q", "1", "2", "3", "4" }.Contains( s, StringComparer.Create( CultureInfo.CurrentCulture, true ) ) );
 
 				switch( option )
 				{
@@ -164,9 +163,6 @@ namespace CsvHelper.SpeedTests
                         break;
                     case "4":
                         CsvReaderGetRecordTestWithReference();
-                        break;
-                    case "5":
-                        CompareToOrigin();
                         break;
                     case "q":
 						return;
@@ -249,44 +245,6 @@ namespace CsvHelper.SpeedTests
                 }
                 stopwatch.Stop();
                 Console.WriteLine("Time: {0}", stopwatch.Elapsed);
-            }
-        }
-
-        private static void CompareToOrigin()
-        {
-            Console.WriteLine("New");
-            for (int x = 0; x < 20; x++)
-            {
-                using (var stream = File.OpenRead(FileNameWithReference))
-                using (var reader = new StreamReader(stream))
-                using (var csvReader = new CsvReader(reader))
-                {
-                    var stopwatch = new Stopwatch();
-                    stopwatch.Start();
-                    while (csvReader.Read())
-                    {
-                        var record = csvReader.GetRecord<TestClassWithReference>();
-                    }
-                    stopwatch.Stop();
-                    Console.WriteLine("Time: {0}", stopwatch.Elapsed);
-                }
-            }
-            Console.WriteLine("Origin");
-            for (int x = 0; x < 20; x++)
-            {
-                using (var stream = File.OpenRead(FileNameWithReference))
-                using (var reader = new StreamReader(stream))
-                using (var csvReader = new CsvReaderOrigin(reader))
-                {
-                    var stopwatch = new Stopwatch();
-                    stopwatch.Start();
-                    while (csvReader.Read())
-                    {
-                        var record = csvReader.GetRecord<TestClassWithReference>();
-                    }
-                    stopwatch.Stop();
-                    Console.WriteLine("Time: {0}", stopwatch.Elapsed);
-                }
             }
         }
 

@@ -34,7 +34,6 @@ namespace CsvHelper.Configuration
 		private string format;
         private Expression convertExpression;
         private Expression convertFieldExpression;
-        private object constantValue;
 
 		/// <summary>
 		/// Gets the property value.
@@ -104,14 +103,6 @@ namespace CsvHelper.Configuration
         /// The convert using value.
         /// </value>
         public virtual Expression ConvertFieldUsingValue { get { return convertFieldExpression; } }
-
-        /// <summary>
-        /// Gets constant value to be used to set the property-value.
-        /// </summary>
-        /// <value>
-        /// The constant using value.
-        /// </value>
-        public virtual object ConstantUsingValue { get { return constantValue; } }
 
         /// <summary>
 		/// Creates a new <see cref="CsvPropertyMap"/> instance using the specified property.
@@ -234,16 +225,6 @@ namespace CsvHelper.Configuration
         public virtual CsvPropertyMap ConvertFieldUsing<T>(Func<string, T> convertFieldExpression)
         {
             this.convertFieldExpression = (Expression<Func<string, T>>)(x => convertFieldExpression(x));
-            return this;
-        }
-
-        /// <summary>
-        /// Specifies an constant value to be used to set the property-value.
-        /// </summary>
-        /// <param name="constantValue">The convert expression.</param>
-        public virtual CsvPropertyMap SetConstantValue(object constantValue)
-        {
-            this.constantValue = constantValue;
             return this;
         }
 

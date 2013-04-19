@@ -85,9 +85,6 @@
     <Compile Include="CsvReader.cs" />
     <Compile Include="Configuration\CsvConfiguration.cs" />
     <Compile Include="CsvReaderException.cs" />
-    <Compile Include="CsvReaderOrigin.cs">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="CsvWriter.cs" />
     <Compile Include="CsvWriterException.cs" />
     <Compile Include="ExceptionHelper.cs" />
